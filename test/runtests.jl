@@ -46,6 +46,17 @@ using Plots
 
     @test isapprox(result_expr, result_fun)
 
+    # Test that the period of the oscillations is correct
+    # TODO
+    tspan = (0.0, 1.0)
+    prob = ODEProblem(model_equations!, u0, tspan, p)
+    ode_solution = solve(prob, isoutofdomain=(y,p,t)->any(x->x<0,y))
+
+    t_eval = LinRange(0.0, 1.0, 4000)
+    pks = find_periodogram_peak(ode_solution, t_eval)
+    # println(pks)
+
+    # Repeat tests with another oscillator
     function Goodwin_PF!(du, u,p,t)
       x, y, z = u
       (α, β, γ, κ, η) = p
