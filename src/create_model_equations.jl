@@ -1,4 +1,4 @@
-function create_model_expression(connectivity)
+macro create_model(connectivity)
   # Create and aggregate interaction terms based on the connectivity
   interaction_terms = Expr[]
   for (i, row) in enumerate(eachrow(connectivity))
