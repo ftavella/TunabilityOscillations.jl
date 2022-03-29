@@ -1,6 +1,6 @@
 module TunabilityOscillations
 
-# Write your package code here.
+using Catalyst
 using DifferentialEquations
 using Statistics
 using DSP

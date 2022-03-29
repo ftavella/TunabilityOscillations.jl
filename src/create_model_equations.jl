@@ -1,33 +1,25 @@
-macro create_model(connectivity)
-  # Create and aggregate interaction terms based on the connectivity
-  interaction_terms = Expr[]
+function create_model(connectivity)
+  N = size(connectivity, 1) # Number of nodes
+  E = count(!iszero, connectivity)# Number of edges
+  @parameters α[1:N], β[1:N], γ[1:E], κ[1:E], η[1:E]
+  @variables t, a[1:N](t)
+  rxs = Reaction[]
+  for i=1:size(connectivity, 1)
+    push!(rxs, Reaction(β[i]*α[i], nothing, [a[i]]))
+    push!(rxs, Reaction(β[i], [a[i]], nothing))
+  end
+  e = 1 # Edge count
   for (i, row) in enumerate(eachrow(connectivity))
-    row_terms = String[]
     for (j, val) in enumerate(row)
-      if val != 0
-        # Define the substrate and sign of the interaction
-        sub = (val == 1) ? "+ (1.0 - abs(x[$i]))" : "- abs(x[$i])"
-        numerator = "$sub * γ[$i, $j] * abs(x[$j]) ^ η[$i, $j]"
-        denominator = "(abs(x[$j]) ^ η[$i, $j] + κ[$i, $j] ^ η[$i, $j]) "
-        term = numerator * " / " * denominator
-        push!(row_terms, term)
+      if val == -1
+        push!(rxs, Reaction(hill(abs(a[j]),γ[e],κ[e],η[e]), [a[i]], nothing))
+        e += 1
+      elseif val == 1
+        push!(rxs, Reaction((1.0 - a[i]) * hill(abs(a[j]),γ[e],κ[e],η[e]), nothing, [a[i]]))
+        e += 1
       end
     end
-    push!(interaction_terms, Meta.parse(join(row_terms)))
   end
-  # Create full terms for each variable
-  expr_terms = Expr[]
-  for i in 1:size(connectivity, 1)
-    t = :(dx[$i] = β[$i] * (α[$i] - abs(x[$i])) +  $(interaction_terms[i]))
-    push!(expr_terms, t)
-  end
-  # Define the expression of the model's equations
-  expr = quote
-    function model_equations!(dx, x, p, t)
-      (α, β, γ, κ, η) = p
-      $(expr_terms...)
-    end
-  end
-
-  return expr
+  @named model = ReactionSystem(rxs, t)
+  return model
 end

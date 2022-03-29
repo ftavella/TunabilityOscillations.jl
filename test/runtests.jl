@@ -1,24 +1,12 @@
 using TunabilityOscillations
-using DifferentialEquations
+# using DifferentialEquations
+using Catalyst, LSODA
 using Test
-
 using Plots
-
-#=
-I think I should define a function for each test to make it more modular and
-easier to understand. Right now the code is a little messy because it has all
-the code within the testset. I should also name the test function so it
-reveals what is being tested. I'm not sure if the test function should return
-a value or the logical test. Maybe returning true of false would be OK. Since
-someone reading the code would go to that function to see what is really
-happening
-=#
 
 @testset "Model creation" begin include("test_model_creation.jl") end
 
 #=
-## Test that the created model equations behave like models defined by hand
-
 # Goodwin Oscillator
 
 # Test that the period of the oscillations is correct
