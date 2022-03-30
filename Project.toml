@@ -15,6 +15,7 @@ Statistics = "10745b16-79ce-11e8-11f9-7d13ad32a3b2"
 Catalyst = "10"
 DSP = "0.7"
 DifferentialEquations = "7"
+LSODA = "0.7"
 Peaks = "0.4"
 julia = "1"
 
