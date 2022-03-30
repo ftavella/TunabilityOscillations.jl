@@ -5,9 +5,15 @@ function find_periodogram_peak(ode_solution, t_eval, f_sampling)
     # Remove mean from solution to avoid peak at low frequencies
     signal = ode_solution(t_eval)[i,:] .- mean(ode_solution(t_eval)[i,:])
     pgram = periodogram(signal; fs=f_sampling)
+    # Find and save largest peak in the periodogram
     pks, vals = findmaxima(pgram.power, 3)
-    # Save largest peak in the periodogram
-    peaks[i] = [pks[argmax(vals)], vals[argmax(vals)]]
+    if isempty(pks) || isempty(vals)
+      # If no peak is found, save maximum value of power spectrum
+      peaks[i] = [pgram.freq[argmax(pgram.power)],
+                  pgram.power[argmax(pgram.power)]]
+    else
+      peaks[i] = [pks[argmax(vals)], vals[argmax(vals)]]
+    end
   end
   return peaks
 end
