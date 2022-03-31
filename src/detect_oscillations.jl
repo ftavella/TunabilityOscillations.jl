@@ -17,3 +17,121 @@ function find_periodogram_peak(ode_solution, t_eval, f_sampling)
   end
   return peaks
 end
+
+function select_params_from_sample(model, p_sample, i)
+  N = length(species(model))
+  P = length(parameters(model))
+  E = Int((P - 2N)/3)
+  new_map_components = []
+  for j in 1:N
+    @nonamespace push!(new_map_components, (model.α[j], p_sample[i,j]))
+    @nonamespace push!(new_map_components, (model.β[j], p_sample[i,N+j]./p_sample[i,N+1]))
+  end
+  for j in 1:E
+    @nonamespace push!(new_map_components, (model.γ[j], p_sample[i,2*N+j]./p_sample[i,N+1]))
+    @nonamespace push!(new_map_components, (model.κ[j], p_sample[i,2*N+E+j]))
+    @nonamespace push!(new_map_components, (model.η[j], p_sample[i,2*N+2*E+j]))
+  end
+  new_pmap = Dict(new_map_components)
+  new_p = ModelingToolkit.varmap_to_vars(new_pmap, parameters(model))
+  return new_p
+end
+
+function generate_LHC_sample(model, samples)
+  N = length(species(model))
+  P = length(parameters(model))
+  E = Int((P - 2N)/3)
+  LHCplan = randomLHC(samples, P)
+  scaling_plan = Tuple{Float64,Float64}[]
+  scaling_plan = vcat(scaling_plan, [(0.0, 1.0) for i in 1:N]) # α
+  scaling_plan = vcat(scaling_plan, [(10.0, 100.0) for i in 1:N]) # β
+  scaling_plan = vcat(scaling_plan, [(100.0, 10000.0) for i in 1:E]) # γ
+  scaling_plan = vcat(scaling_plan, [(0.0, 1.0) for i in 1:E]) # κ
+  scaling_plan = vcat(scaling_plan, [(3.0, 10.0) for i in 1:E]) # η
+  p_sample = scaleLHC(LHCplan, scaling_plan)
+  return p_sample
+end
+
+function create_generic_ode_problem(model)
+  N = length(species(model))
+  P = length(parameters(model))
+  E = Int((P - 2N)/3)
+  p_dict_components = []
+  @nonamespace p_dict_components = vcat(p_dict_components, [(model.α[i], 0.5) for i in 1:N])
+  @nonamespace p_dict_components = vcat(p_dict_components, [(model.β[i], 1.0) for i in 1:N])
+  @nonamespace p_dict_components = vcat(p_dict_components, [(model.γ[i], 1.0) for i in 1:E])
+  @nonamespace p_dict_components = vcat(p_dict_components, [(model.κ[i], 0.5) for i in 1:E])
+  @nonamespace p_dict_components = vcat(p_dict_components, [(model.η[i], 1.0) for i in 1:E])
+  pmap = Dict(p_dict_components)
+  @nonamespace u0_dict_components = [(model.a[i], 0.5) for i in 1:N]
+  u₀map = Dict(u0_dict_components)
+  # Setup ODE problem
+  prob = ODEProblem(model, u₀map, (0.0, 1.0), pmap)
+  return prob
+end
+
+function infer_timescale(model, p_sample, i)
+  N = length(species(model))
+  P = length(parameters(model))
+  E = Int((P - 2N)/3)
+  rates = [p_sample[i,k] for k in (N+1):(2*N+E)]./p_sample[i,N+1]
+  timescale = 1.0/minimum(rates)
+  return timescale
+end
+
+function find_oscillations(model, samples)
+  # Periodogram hyperparameter
+  f_sampling = 4000
+  # Total simulation time = equil_tscales * inferred_tscale
+  equil_tscales = 10
+  # Create parameter sample with LHC
+  N = length(species(model))
+  P = length(parameters(model))
+  E = Int((P - 2N)/3)
+  p_sample = generate_LHC_sample(model, samples)
+  # Create generic parameter map and initial condition
+  prob = create_generic_ode_problem(model)
+
+  # Define functions to work with EnsembleProblem
+  function prob_func(prob, i, repeat)
+    i = Int(i)
+    # Report status to terminal
+    if 100*i/samples % 10 == 0
+      display(100*i/samples)
+    end
+    # Set random initial condition
+    equil_u0 = rand(N)
+    # Select new parameters
+    new_p = select_params_from_sample(model, p_sample, i)
+    # Estimate timescale
+    timescale = infer_timescale(model, p_sample, i)
+    # Equilibrate
+    equilibration = solve(prob, lsoda(), p=new_p, u0=equil_u0,
+                          tspan=[0.0, equil_tscales*timescale])
+    # Set new initial condition
+    new_u0 = equilibration.u[end]
+    remake(prob, p=new_p, u0=new_u0, tspan=[0.0, equil_tscales*timescale])
+  end
+
+  function output_func(sol, i)
+    t_eval = LinRange(sol.t[1], sol.t[end], f_sampling)
+    peaks = find_periodogram_peak(sol, t_eval, f_sampling)
+    out = [sol, peaks]
+    return (out, false)
+  end
+  # Setup ensemble problem and solve it
+  ensemble_prob = EnsembleProblem(prob, prob_func=prob_func,
+                                  output_func=output_func)
+  sim = solve(ensemble_prob, lsoda(), EnsembleThreads(),
+              trajectories=samples, abstol=1e-12)
+  # Check if any solution oscillates
+  osci_idxs = Int[]
+  for i in 1:samples
+    if sim.u[i][2][1][1] == sim.u[i][2][2][1] && sim.u[i][2][2][1] == sim.u[i][2][3][1]
+      if sim.u[i][2][1][2] > 1e-6
+        push!(osci_idxs, i)
+      end
+    end
+  end
+  return [sim, osci_idxs]
+end
