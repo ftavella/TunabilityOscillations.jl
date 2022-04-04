@@ -1,7 +1,4 @@
 function peak_similarity(connectivity, pmap, tspan, init_cond)
-  #=
-    Function to ...
-  =#
   model = create_model(connectivity)
   @nonamespace u₀map = [model.a[1] => init_cond[1], model.a[2] => init_cond[2],
                         model.a[3] => init_cond[3]]

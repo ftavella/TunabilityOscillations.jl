@@ -18,6 +18,9 @@ function find_periodogram_peak(ode_solution, t_eval, f_sampling)
   return peaks
 end
 
+#=
+This function divides by β1 to create a dimensionless system
+=#
 function select_params_from_sample(model, p_sample, i)
   N = length(species(model))
   P = length(parameters(model))
@@ -37,17 +40,17 @@ function select_params_from_sample(model, p_sample, i)
   return new_p
 end
 
-function generate_LHC_sample(model, samples)
+function generate_LHC_sample(model, samples, lim)
   N = length(species(model))
   P = length(parameters(model))
   E = Int((P - 2N)/3)
   LHCplan = randomLHC(samples, P)
   scaling_plan = Tuple{Float64,Float64}[]
-  scaling_plan = vcat(scaling_plan, [(0.0, 1.0) for i in 1:N]) # α
-  scaling_plan = vcat(scaling_plan, [(10.0, 100.0) for i in 1:N]) # β
-  scaling_plan = vcat(scaling_plan, [(100.0, 10000.0) for i in 1:E]) # γ
-  scaling_plan = vcat(scaling_plan, [(0.0, 1.0) for i in 1:E]) # κ
-  scaling_plan = vcat(scaling_plan, [(3.0, 10.0) for i in 1:E]) # η
+  scaling_plan = vcat(scaling_plan, [(lim["α"][1], lim["α"][2]) for i in 1:N])
+  scaling_plan = vcat(scaling_plan, [(lim["β"][1], lim["β"][2]) for i in 1:N])
+  scaling_plan = vcat(scaling_plan, [(lim["γ"][1], lim["γ"][2]) for i in 1:E])
+  scaling_plan = vcat(scaling_plan, [(lim["κ"][1], lim["κ"][2]) for i in 1:E])
+  scaling_plan = vcat(scaling_plan, [(lim["η"][1], lim["η"][2]) for i in 1:E])
   p_sample = scaleLHC(LHCplan, scaling_plan)
   return p_sample
 end
@@ -79,7 +82,7 @@ function infer_timescale(model, p_sample, i)
   return timescale
 end
 
-function find_oscillations(model, samples)
+function find_oscillations(model, samples, param_limits)
   # Periodogram hyperparameter
   f_sampling = 4000
   # Total simulation time = equil_tscales * inferred_tscale
@@ -88,7 +91,7 @@ function find_oscillations(model, samples)
   N = length(species(model))
   P = length(parameters(model))
   E = Int((P - 2N)/3)
-  p_sample = generate_LHC_sample(model, samples)
+  p_sample = generate_LHC_sample(model, samples, param_limits)
   # Create generic parameter map and initial condition
   prob = create_generic_ode_problem(model)
 
@@ -97,7 +100,7 @@ function find_oscillations(model, samples)
     i = Int(i)
     # Report status to terminal
     if 100*i/samples % 10 == 0
-      display(100*i/samples)
+      println(100*i/samples)
     end
     # Set random initial condition
     equil_u0 = rand(N)
@@ -127,8 +130,10 @@ function find_oscillations(model, samples)
   # Check if any solution oscillates
   osci_idxs = Int[]
   for i in 1:samples
-    if sim.u[i][2][1][1] == sim.u[i][2][2][1] && sim.u[i][2][2][1] == sim.u[i][2][3][1]
-      if sim.u[i][2][1][2] > 1e-6
+    freq_comparison = [sim.u[i][2][j][1] == sim.u[i][2][j+1][1] for j in 1:N-1]
+    if all(freq_comparison)
+      peak_height = [sim.u[i][2][j][2] > 1e-6 for j in 1:N]
+      if all(peak_height)
         push!(osci_idxs, i)
       end
     end
