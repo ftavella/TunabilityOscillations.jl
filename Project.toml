@@ -17,6 +17,7 @@ Catalyst = "10"
 DSP = "0.7"
 DifferentialEquations = "7"
 LSODA = "0.7"
+LatinHypercubeSampling = "1"
 Peaks = "0.4"
 julia = "1"
 
