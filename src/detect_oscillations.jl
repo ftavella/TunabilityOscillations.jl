@@ -98,10 +98,12 @@ function find_oscillations(model, samples, param_limits)
   # Define functions to work with EnsembleProblem
   function prob_func(prob, i, repeat)
     i = Int(i)
+    #=
     # Report status to terminal
     if 100*i/samples % 10 == 0
       println(100*i/samples)
     end
+    =#
     # Set random initial condition
     equil_u0 = rand(N)
     # Select new parameters
@@ -138,5 +140,5 @@ function find_oscillations(model, samples, param_limits)
       end
     end
   end
-  return [sim, osci_idxs]
+  return [sim, p_sample, osci_idxs]
 end
