@@ -111,8 +111,9 @@ function find_oscillations(model, samples, param_limits)
     # Estimate timescale
     timescale = infer_timescale(model, p_sample, i)
     # Equilibrate
-    equilibration = solve(prob, lsoda(), p=new_p, u0=equil_u0,
-                          tspan=[0.0, equil_tscales*timescale])
+    equil_prob = remake(prob, p=new_p, u0=equil_u0,
+                        tspan=[0.0, equil_tscales*timescale])
+    equilibration = solve(equil_prob, lsoda())
     # Set new initial condition
     new_u0 = equilibration.u[end]
     remake(prob, p=new_p, u0=new_u0, tspan=[0.0, equil_tscales*timescale])
