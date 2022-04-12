@@ -141,5 +141,5 @@ function find_oscillations(model, samples, param_limits)
       end
     end
   end
-  return [sim, p_sample, osci_idxs]
+  return [sim, p_sample[osci_idxs,:], osci_idxs]
 end
