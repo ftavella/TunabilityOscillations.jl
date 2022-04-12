@@ -122,7 +122,7 @@ function find_oscillations(model, samples, param_limits)
   function output_func(sol, i)
     t_eval = LinRange(sol.t[1], sol.t[end], f_sampling)
     peaks = find_periodogram_peak(sol, t_eval, f_sampling)
-    out = [sol, peaks]
+    out = [sol.u[end], peaks]
     return (out, false)
   end
   # Setup ensemble problem and solve it
