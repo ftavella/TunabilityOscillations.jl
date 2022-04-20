@@ -6,14 +6,8 @@ function find_periodogram_peak(ode_solution, t_eval, f_sampling)
     signal = ode_solution(t_eval)[i,:] .- mean(ode_solution(t_eval)[i,:])
     pgram = periodogram(signal; fs=f_sampling)
     # Find and save largest peak in the periodogram
-    pks, vals = findmaxima(pgram.power, 3)
-    if isempty(pks) || isempty(vals)
-      # If no peak is found, save maximum value of power spectrum
-      peaks[i] = [pgram.freq[argmax(pgram.power)],
-                  pgram.power[argmax(pgram.power)]]
-    else
-      peaks[i] = [pks[argmax(vals)], vals[argmax(vals)]]
-    end
+    peaks[i] = [pgram.freq[argmax(pgram.power)],
+                pgram.power[argmax(pgram.power)]]
   end
   return peaks
 end
@@ -84,7 +78,7 @@ end
 
 function find_oscillations(model, samples, param_limits)
   # Periodogram hyperparameter
-  f_sampling = 4000
+  f_sampling = 200
   # Total simulation time = equil_tscales * inferred_tscale
   equil_tscales = 10
   # Create parameter sample with LHC
@@ -120,7 +114,7 @@ function find_oscillations(model, samples, param_limits)
   end
 
   function output_func(sol, i)
-    t_eval = LinRange(sol.t[1], sol.t[end], f_sampling)
+    t_eval = LinRange(sol.t[1], sol.t[end], Int(f_sampling*sol.t[end]))
     peaks = find_periodogram_peak(sol, t_eval, f_sampling)
     out = [sol.u[end], peaks]
     return (out, false)
