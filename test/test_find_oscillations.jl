@@ -20,8 +20,8 @@ param_limits = Dict([
 for (name, connectivity) in networks
   println("Analyzing network $name, connectivity: $connectivity")
   local model = create_model(connectivity)
-  sim, p_sample, osci_idxs = find_oscillations(model, samples, param_limits)
-  @test length(osci_idxs) > 1
+  sim, p_sample = find_oscillations(model, samples, param_limits)
+  @test size(p_sample, 1) > 1
 end
 
 networks_not_oscil = Dict([
@@ -35,12 +35,6 @@ networks_not_oscil = Dict([
 for (name, connectivity) in networks_not_oscil
   println("Analyzing network $name, connectivity: $connectivity")
   local model = create_model(connectivity)
-  sim, p_sample, osci_idxs = find_oscillations(model, samples, param_limits)
-  @test length(osci_idxs) == 0
+  sim, p_sample = find_oscillations(model, samples, param_limits)
+  @test size(p_sample, 1) == 0
 end
-
-  # scaling_plan = vcat(scaling_plan, [(0.0, 1.0) for i in 1:N]) # α
-  # scaling_plan = vcat(scaling_plan, [(10.0, 100.0) for i in 1:N]) # β
-  # scaling_plan = vcat(scaling_plan, [(100.0, 10000.0) for i in 1:E]) # γ
-  # scaling_plan = vcat(scaling_plan, [(0.0, 1.0) for i in 1:E]) # κ
-  # scaling_plan = vcat(scaling_plan, [(3.0, 10.0) for i in 1:E]) # η
