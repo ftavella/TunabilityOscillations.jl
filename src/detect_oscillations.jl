@@ -121,7 +121,7 @@ function find_oscillations(model, samples, param_limits)
     return (out, false)
   end
   # Setup ensemble problem and solve it
-  ensemble_prob = EnsembleProblem(prob, prob_func=prob_func,
+  ensemble_prob = EnsembleProblem(prob, prob_func=prob_func, safetycopy=false,
                                   output_func=output_func)
   sim = solve(ensemble_prob, lsoda(), EnsembleThreads(),
               trajectories=samples, abstol=1e-12)
