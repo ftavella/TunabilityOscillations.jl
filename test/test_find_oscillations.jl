@@ -20,7 +20,7 @@ param_limits = Dict([
 for (name, connectivity) in networks
   println("Analyzing network $name, connectivity: $connectivity")
   local model = create_model(connectivity)
-  sim, p_sample = find_oscillations(model, samples, param_limits)
+  @time sim, p_sample = find_oscillations(model, samples, param_limits)
   @test size(p_sample, 1) > 1
 end
 
@@ -35,6 +35,6 @@ networks_not_oscil = Dict([
 for (name, connectivity) in networks_not_oscil
   println("Analyzing network $name, connectivity: $connectivity")
   local model = create_model(connectivity)
-  sim, p_sample = find_oscillations(model, samples, param_limits)
+  @time sim, p_sample = find_oscillations(model, samples, param_limits)
   @test size(p_sample, 1) == 0
 end

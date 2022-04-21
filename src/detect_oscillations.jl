@@ -81,6 +81,7 @@ function find_oscillations(model, samples, param_limits)
   f_sampling = 200
   # Total simulation time = equil_tscales * inferred_tscale
   equil_tscales = 50
+  sim_tscales = 10
   # Create parameter sample with LHC
   N = length(species(model))
   P = length(parameters(model))
@@ -110,7 +111,7 @@ function find_oscillations(model, samples, param_limits)
     equilibration = solve(equil_prob, lsoda())
     # Set new initial condition
     new_u0 = equilibration.u[end]
-    remake(prob, p=new_p, u0=new_u0, tspan=[0.0, equil_tscales*timescale])
+    remake(prob, p=new_p, u0=new_u0, tspan=[0.0, sim_tscales*timescale])
   end
 
   function output_func(sol, i)
