@@ -80,7 +80,7 @@ function find_oscillations(model, samples, param_limits)
   # Periodogram hyperparameter
   f_sampling = 200
   # Total simulation time = equil_tscales * inferred_tscale
-  equil_tscales = 10
+  equil_tscales = 50
   # Create parameter sample with LHC
   N = length(species(model))
   P = length(parameters(model))
