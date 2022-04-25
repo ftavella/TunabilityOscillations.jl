@@ -78,7 +78,7 @@ end
 
 function find_oscillations(model, samples, param_limits)
   # Periodogram hyperparameter
-  f_sampling = 500
+  f_sampling = 200
   # Total simulation time = equil_tscales * inferred_tscale
   equil_tscales = 50
   sim_tscales = 10
@@ -131,7 +131,7 @@ function find_oscillations(model, samples, param_limits)
   for i in 1:samples
     freq_comparison = [sim.u[i][2][j][1] == sim.u[i][2][j+1][1] for j in 1:N-1]
     if all(freq_comparison)
-      peak_height = [sim.u[i][2][j][2] > 1e-8 for j in 1:N]
+      peak_height = [sim.u[i][2][j][2] > 1e-6 for j in 1:N]
       if all(peak_height)
         push!(osci_idxs, i)
       end
