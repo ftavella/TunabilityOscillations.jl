@@ -78,7 +78,7 @@ end
 
 function find_oscillations(model, samples, param_limits)
   # Periodogram hyperparameter
-  f_sampling = 200
+  f_sampling = 500
   # Total simulation time = equil_tscales * inferred_tscale
   equil_tscales = 50
   sim_tscales = 10
@@ -108,7 +108,7 @@ function find_oscillations(model, samples, param_limits)
     # Equilibrate
     equil_prob = remake(prob, p=new_p, u0=equil_u0,
                         tspan=[0.0, equil_tscales*timescale])
-    equilibration = solve(equil_prob, lsoda())
+    equilibration = solve(equil_prob, lsoda(), abstol=1e-12)
     # Set new initial condition
     new_u0 = equilibration.u[end]
     remake(prob, p=new_p, u0=new_u0, tspan=[0.0, sim_tscales*timescale])
@@ -131,7 +131,7 @@ function find_oscillations(model, samples, param_limits)
   for i in 1:samples
     freq_comparison = [sim.u[i][2][j][1] == sim.u[i][2][j+1][1] for j in 1:N-1]
     if all(freq_comparison)
-      peak_height = [sim.u[i][2][j][2] > 1e-6 for j in 1:N]
+      peak_height = [sim.u[i][2][j][2] > 1e-8 for j in 1:N]
       if all(peak_height)
         push!(osci_idxs, i)
       end
