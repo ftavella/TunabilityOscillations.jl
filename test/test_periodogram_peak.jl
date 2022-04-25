@@ -4,9 +4,10 @@ function peak_similarity(connectivity, pmap, tspan, init_cond)
                         model.a[3] => init_cond[3]]
   prob = ODEProblem(model, u₀map, tspan, pmap)
   sol = solve(prob, lsoda())
-  f_sampling = 4000
+  f_sampling = Int(2e3)
   t_eval = LinRange(tspan[1], tspan[end], f_sampling)
-  pks = find_periodogram_peak(sol, t_eval, f_sampling)
+  fft_sampling = round(Int, f_sampling/tspan[end])
+  pks = find_periodogram_peak(sol, t_eval, fft_sampling)
   return [pks[1][1] == pks[2][1], pks[2][1] == pks[3][1]]
 end
 
