@@ -4,7 +4,7 @@ function find_periodogram_peak(ode_solution, t_eval, f_sampling)
   for i in 1:nodes
     # Remove mean from solution to avoid peak at low frequencies
     signal = ode_solution(t_eval)[i,:] .- mean(ode_solution(t_eval)[i,:])
-    pgram = periodogram(signal; fs=f_sampling)
+    pgram = periodogram(signal; fs=f_sampling, nfft=Int(2e4))
     # Find and save largest peak in the periodogram
     peaks[i] = [pgram.freq[argmax(pgram.power)],
                 pgram.power[argmax(pgram.power)]]
@@ -78,7 +78,7 @@ end
 
 function find_oscillations(model, samples, param_limits)
   # Periodogram hyperparameter
-  f_sampling = 200
+  f_sampling = Int(2e3)
   # Total simulation time = equil_tscales * inferred_tscale
   equil_tscales = 50
   sim_tscales = 10
@@ -115,9 +115,10 @@ function find_oscillations(model, samples, param_limits)
   end
 
   function output_func(sol, i)
-    t_eval = LinRange(sol.t[1], sol.t[end], round(Int, f_sampling*sol.t[end]))
-    peaks = find_periodogram_peak(sol, t_eval, f_sampling)
-    amplitudes = [maximum(sol[j,:]) - minimum(sol[j,:]) for j in 1:N]
+    t_eval = LinRange(sol.t[1], sol.t[end], f_sampling)
+    fft_sampling = round(Int, f_sampling/sol.t[end])
+    peaks = find_periodogram_peak(sol, t_eval, fft_sampling)
+    amplitudes = [maximum(sol(t_eval)[j,:]) - minimum(sol(t_eval)[j,:]) for j in 1:N]
     out = [sol.u[end], peaks, amplitudes]
     return (out, false)
   end
