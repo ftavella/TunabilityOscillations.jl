@@ -1,4 +1,5 @@
-samples = Int(1e3)
+samples = Int(2e3)
+"""
 networks = Dict([
   ("G", [0 0 1; 1 0 0; 0 -1 0]),
   ("R", [0 0 -1; -1 0 0; 0 -1 0]),
@@ -10,17 +11,24 @@ networks = Dict([
   ("Cdc25", [0 0 -1 1; -1 0 0 0; 0 -1 0 0; 1 0 0 0]),
   ("Wee1", [0 0 1 1; 1 0 0 0; 0 -1 0 0; -1 0 0 0]),
 ])
+"""
+networks = Dict([
+  ("G", [0 0 1; 1 0 0; 0 -1 0]),
+  ("R", [0 0 -1; -1 0 0; 0 -1 0]),
+])
 hparams = Dict([("peak_num_thresh", 30), ("freq_tolerance", 0.01),
                 ("equil_tscales", 50), ("sim_tscales", 40),
                 ("power_threshold", 1e-7), ("amp_cv_thresh", 0.05),
-                ("abstol", 1e-12), ("reltol", 1e-6)])
+                ("abstol", 1e-6), ("reltol", 1e-3),
+                ("solver", solver), ("maxiters", 1e6),
+                ("sampling_style", "lhc"), ("sampling_scale", "log")])
 param_limits = Dict([
-  ("α", [0.0, 1.0]),
-  ("β", [10.0, 100.0]),
-  ("γ", [100.0, 10000.0]),
-  ("κ", [0.0, 1.0]),
-  ("η", [3.0, 10.0]),
-])
+  ("α", [10^-2.5, 10^2.5]),
+  ("β", [10^-2.5, 10^2.5]),
+  ("γ", [10^2, 10^4]),
+  ("κ", [0.1, 1.0]),
+  ("η", [1.0, 10.0]),])
+
 for (name, connectivity) in networks
   println("Analyzing network $name, Connectivity: $connectivity")
   local model = create_model(connectivity)
