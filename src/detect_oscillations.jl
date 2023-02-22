@@ -74,8 +74,7 @@ end
 Reorder and normalize an array of parameters to be suitable for remaking an
 ODEProblem.
 
-All β and γ parameters are normalized by β1 to achieve a dimensionless time
-system. The returned parameter array has the right order to use on ODE solvers.
+The returned parameter array has the right order to use on ODE solvers.
 Input variable p_set is assumed to be ordered as:
 [α1, α2, ..., β1, ..., γ1, ..., κ1, ..., η1, ..., ηN]
 """
@@ -86,10 +85,10 @@ function ode_params_from_param_set(model::ReactionSystem, p_set::Vector)
   new_map_vals = []
   for j in 1:N
     @nonamespace push!(new_map_vals, (model.α[j], p_set[j]))
-    @nonamespace push!(new_map_vals, (model.β[j], p_set[N+j]./p_set[N+1]))
+    @nonamespace push!(new_map_vals, (model.β[j], p_set[N+j]))
   end
   for j in 1:E
-    @nonamespace push!(new_map_vals, (model.γ[j], p_set[2*N+j]./p_set[N+1]))
+    @nonamespace push!(new_map_vals, (model.γ[j], p_set[2*N+j]))
     @nonamespace push!(new_map_vals, (model.κ[j], p_set[2*N+E+j]))
     @nonamespace push!(new_map_vals, (model.η[j], p_set[2*N+2*E+j]))
   end
@@ -105,18 +104,41 @@ Create an array of parameter sets by LatinHypercubeSampling.
 A total of `samples` parameter sets are generated. Sample values are scaled by
 the quantities defined in `lim`.
 """
-function generate_LHC_sample(model::ReactionSystem, samples::Int, lim::Dict)
+function generate_LHC_sample(model::ReactionSystem, samples::Int, lim::Dict, hparams::Dict)
   N = length(species(model))
   P = length(parameters(model))
   E = Int((P - 2N)/3)
-  LHCplan = randomLHC(samples, P)
+  # Setup scaling rule for the sample
   scaling_plan = Tuple{Float64,Float64}[]
-  scaling_plan = vcat(scaling_plan, [(lim["α"][1], lim["α"][2]) for i in 1:N])
-  scaling_plan = vcat(scaling_plan, [(lim["β"][1], lim["β"][2]) for i in 1:N])
-  scaling_plan = vcat(scaling_plan, [(lim["γ"][1], lim["γ"][2]) for i in 1:E])
+  if lowercase(hparams["sampling_scale"]) == "log"
+    scaling_plan = vcat(scaling_plan, [(log10(lim["α"][1]), log10(lim["α"][2])) for i in 1:N])
+    scaling_plan = vcat(scaling_plan, [(log10(lim["β"][1]), log10(lim["β"][2])) for i in 1:N])
+    scaling_plan = vcat(scaling_plan, [(log10(lim["γ"][1]), log10(lim["γ"][2])) for i in 1:E])
+  elseif lowercase(hparams["sampling_scale"]) == "linear"
+    scaling_plan = vcat(scaling_plan, [(lim["α"][1], lim["α"][2]) for i in 1:N])
+    scaling_plan = vcat(scaling_plan, [(lim["β"][1], lim["β"][2]) for i in 1:N])
+    scaling_plan = vcat(scaling_plan, [(lim["γ"][1], lim["γ"][2]) for i in 1:E])
+  end
   scaling_plan = vcat(scaling_plan, [(lim["κ"][1], lim["κ"][2]) for i in 1:E])
   scaling_plan = vcat(scaling_plan, [(lim["η"][1], lim["η"][2]) for i in 1:E])
-  return scaleLHC(LHCplan, scaling_plan)
+
+  # Draw sample
+  if lowercase(hparams["sampling_style"]) == "lhc"
+    LHCplan = randomLHC(samples, P)
+  elseif lowercase(hparams["sampling_style"]) == "random"
+    LHCplan = rand([i for i in 1:samples], samples, P)
+  end
+
+  LHC = scaleLHC(LHCplan, scaling_plan)
+  # Rescale accordingly if sampling scale is log
+  if lowercase(hparams["sampling_scale"]) == "log"
+    LHC[:, 1:2*N+E] = 10 .^ LHC[:, 1:2*N+E]
+  end
+
+  # Make it dimensionless in time
+  LHC[:, 1] .= 1.0
+
+  return LHC
 end
 
 """
@@ -149,8 +171,8 @@ function infer_timescale(model::ReactionSystem, p_set::Vector)
   N = length(species(model))
   P = length(parameters(model))
   E = Int((P - 2N)/3)
-  # Only β2 through γN affect the timescale of the solution. Normalize by β1.
-  rates = [p_set[k] for k in (N+1):(2*N+E)]./p_set[N+1]
+  # Only α through γ affect the timescale of the solution.
+  rates = [p_set[k] for k in 1:(2*N+E)]
   timescale = 1.0/minimum(rates)
   return timescale
 end
@@ -190,7 +212,7 @@ Compute parameter sets that produce oscillations in a model.
 function find_oscillations(model::ReactionSystem, samples::Int,
                            param_limits::Dict, hparams::Dict)
   N = length(species(model))
-  p_sample = generate_LHC_sample(model, samples, param_limits)
+  p_sample = generate_LHC_sample(model, samples, param_limits, hparams)
   prob = create_generic_ode_problem(model)
 
   """
@@ -207,8 +229,8 @@ function find_oscillations(model::ReactionSystem, samples::Int,
     t_final_eq = hparams["equil_tscales"]*timescale
     equil_prob = remake(prob, p=ode_p_set, u0=ones(N)/2.0,
                         tspan=[0.0, t_final_eq])
-    equil_sol = solve(equil_prob, lsoda(), abstol=hparams["abstol"],
-                      reltol=hparams["reltol"])
+    equil_sol = solve(equil_prob, hparams["solver"], abstol=hparams["abstol"],
+                      reltol=hparams["reltol"], maxiters=hparams["maxiters"])
     # Set parameters for simulation
     midpoint = round(Int, length(equil_sol.t)/2.0)
     final_half_eq = equil_sol[midpoint:end]
@@ -242,8 +264,9 @@ function find_oscillations(model::ReactionSystem, samples::Int,
   # Setup EnsembleProblem and solve it
   ensemble_prob = EnsembleProblem(prob, prob_func=prob_func, safetycopy=false,
                                   output_func=output_func)
-  sim = solve(ensemble_prob, lsoda(), EnsembleThreads(),
-              trajectories=samples, abstol=1e-12)
+  sim = solve(ensemble_prob, hparams["solver"], EnsembleThreads(),
+              trajectories=samples, abstol=hparams["abstol"],
+                      reltol=hparams["reltol"], maxiters=hparams["maxiters"])
   # Return only data from oscillatory solutions
   osci_idxs = findall(x->x[1], sim.u)
   return [sim.u[osci_idxs], p_sample[osci_idxs,:]]

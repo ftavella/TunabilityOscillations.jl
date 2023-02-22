@@ -5,7 +5,11 @@ function create_model(connectivity)
   @variables t, a[1:N](t)
   rxs = Reaction[]
   for i=1:size(connectivity, 1)
-    push!(rxs, Reaction(β[i]*α[i], nothing, [a[i]]))
+    # + Alpha
+    push!(rxs, Reaction(α[i], nothing, [a[i]]))
+    # - Alpha x A
+    push!(rxs, Reaction(α[i], [a[i]], nothing))
+    # - Beta x A
     push!(rxs, Reaction(β[i], [a[i]], nothing))
   end
   e = 1 # Edge count
