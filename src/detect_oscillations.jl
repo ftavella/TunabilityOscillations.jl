@@ -99,10 +99,10 @@ end
 """
     generate_LHC_sample(model::ReactionSystem, samples::Int, lim::Dict)
 
-Create an array of parameter sets by LatinHypercubeSampling.
+Create an array of parameter sets by LatinHypercube or Random sampling.
 
 A total of `samples` parameter sets are generated. Sample values are scaled by
-the quantities defined in `lim`.
+the quantities defined in `lim`. Scaling can be linear or logarithmic for α, β, and γ.
 """
 function generate_LHC_sample(model::ReactionSystem, samples::Int, lim::Dict, hparams::Dict)
   N = length(species(model))
