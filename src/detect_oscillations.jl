@@ -230,7 +230,8 @@ function find_oscillations(model::ReactionSystem, samples::Int,
     equil_prob = remake(prob, p=ode_p_set, u0=ones(N)/2.0,
                         tspan=[0.0, t_final_eq])
     equil_sol = solve(equil_prob, hparams["solver"], abstol=hparams["abstol"],
-                      reltol=hparams["reltol"], maxiters=hparams["maxiters"])
+                      reltol=hparams["reltol"], maxiters=hparams["maxiters"],
+                      dense=false)
     # Set parameters for simulation
     midpoint = round(Int, length(equil_sol.t)/2.0)
     final_half_eq = equil_sol[midpoint:end]
@@ -264,9 +265,9 @@ function find_oscillations(model::ReactionSystem, samples::Int,
   # Setup EnsembleProblem and solve it
   ensemble_prob = EnsembleProblem(prob, prob_func=prob_func, safetycopy=false,
                                   output_func=output_func)
-  sim = solve(ensemble_prob, hparams["solver"], EnsembleThreads(),
-              trajectories=samples, abstol=hparams["abstol"],
-                      reltol=hparams["reltol"], maxiters=hparams["maxiters"])
+  sim = solve(ensemble_prob, hparams["solver"], EnsembleThreads(), 
+              trajectories=samples, abstol=hparams["abstol"], reltol=hparams["reltol"], 
+              maxiters=hparams["maxiters"], dense=false)
   # Return only data from oscillatory solutions
   osci_idxs = findall(x->x[1], sim.u)
   return [sim.u[osci_idxs], p_sample[osci_idxs,:]]
