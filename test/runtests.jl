@@ -1,6 +1,6 @@
-using TunabilityOscillations
+using TunabilityOscillations, Peaks
 using DifferentialEquations, Statistics
-using Test, Catalyst, Random, JLD2 
+using Test, Catalyst, Random, JLD2, Plots
 
 Random.seed!(123)
 
