@@ -1,6 +1,26 @@
-function create_model(connectivity)
-  N = size(connectivity, 1) # Number of nodes
-  E = count(!iszero, connectivity)# Number of edges
+"""
+    create_model(connectivity::Matrix)
+
+Creates a ReactionSystem based on the provided `connectivity`.
+
+# Arguments
+- `connectivity::Matrix`: A 2 dimensional matrix filled with -1, 0, and 1 values indicating the edges of the network.
+"""
+function create_model(connectivity::Matrix)
+  # Check that input is correct
+  if isempty(connectivity)
+    throw(DomainError(connectivity, "Connectivity cannot be empty"))
+  elseif ndims(connectivity) != 2
+    throw(DomainError(connectivity, "Connectivity has to be a 2x2 matrix"))
+  elseif size(connectivity, 1) != size(connectivity, 2)
+    throw(DomainError(connectivity, "Connectivity has to be a square matrix"))
+  elseif any([v ∉ [-1 0 1] for v in connectivity])
+    throw(DomainError(connectivity, "Only -1, 0, and 1 are allowed as connectivity values"))
+  end
+  # Number of nodes
+  N = size(connectivity, 1) 
+  # Number of edges
+  E = count(!iszero, connectivity)
   @parameters α[1:N], β[1:N], γ[1:E], κ[1:E], η[1:E]
   @variables t, a[1:N](t)
   rxs = Reaction[]
@@ -12,7 +32,8 @@ function create_model(connectivity)
     # - Beta x A
     push!(rxs, Reaction(β[i], [a[i]], nothing))
   end
-  e = 1 # Edge count
+  # Edge count
+  e = 1 
   for (i, row) in enumerate(eachrow(connectivity))
     for (j, val) in enumerate(row)
       if val == -1
