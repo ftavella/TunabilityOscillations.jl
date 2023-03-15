@@ -1,12 +1,12 @@
 """
-    create_model(connectivity::Matrix)
+    create_model(connectivity::AbstractMatrix)
 
 Creates a ReactionSystem based on the provided `connectivity`.
 
 # Arguments
-- `connectivity::Matrix`: A 2 dimensional matrix filled with -1, 0, and 1 values indicating the edges of the network.
+- `connectivity::AbstractMatrix`: A 2 dimensional matrix filled with -1, 0, and 1 values indicating the edges of the network.
 """
-function create_model(connectivity::Matrix)
+function create_model(connectivity::AbstractMatrix)
   # Check that input is correct
   if isempty(connectivity)
     throw(DomainError(connectivity, "Connectivity cannot be empty"))
